@@ -1,0 +1,33 @@
+% Pseudocódigo sucinto do algoritmo ortool_l.py
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\begin{document}
+
+\section*{Pseudocódigo do Algoritmo de Posicionamento de Servidores Fog}
+
+\begin{algorithm}[H]
+\caption{Posicionamento de Servidores Fog (ORTools)}
+\begin{algorithmic}[1]
+\State Receber matrizes de latências e capacidades, parâmetros de latência/capacidade máxima/mínima, nó cloud
+\State Inicializar solver de programação linear inteira
+\State Definir variáveis de decisão $x[i]$ (servidor fog) e $y[i][j]$ (nó $i$ servido por $j$)
+\State Adicionar restrições:
+    \begin{itemize}
+        \item Cada nó deve ser servido por um servidor
+        \item Se $i$ é servido por $j$, então $j$ é servidor
+        \item Servidor serve a si mesmo
+        \item Capacidade e latência entre nós e cloud
+        \item Cloud é sempre servidor
+    \end{itemize}
+\State Definir função objetivo: minimizar número de servidores e latência média
+\State Resolver o problema
+\State Extrair solução: quais nós são servidores, latência média
+\end{algorithmic}
+\end{algorithm}
+
+\section*{Complexidade}
+O algoritmo resolve um problema de Programação Linear Inteira Mista (MILP) com \(N\) nós, \(O(N^2)\) variáveis e restrições. A complexidade é exponencial no pior caso devido à natureza do MILP, embora o tamanho do modelo cresça apenas quadraticamente com \(N\), o que limita na prática o número de nós que podem ser resolvidos em tempo razoável.
+
+
+\end{document}

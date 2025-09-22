@@ -13,22 +13,22 @@ import exp_excentricidade_lat_min
 
 # Configurações do experimento
 TOPOLOGY_PATH = './nsfnetbw/'
-N_EXPERIMENTS = 320
+N_EXPERIMENTS = 500
 TOPOLOGY_NAME = 'nsfnetbw'
 
 # Configurações da aplicação IoT Industrial
 IOT_CONFIG = {
         "nome": "Videoconferência (HD)",
-        "latencia": 100,
-        "capacidade": 1.5
+        "latencia": 25,
+        "capacidade": 50
     }
 
 # Parâmetros da rede
-L_cloud_fog = 100000
-C_cloud_fog = 25
+L_cloud_fog = 25
+C_cloud_fog = 50
 escala_latencia = 0.025/2
 
-print(f"=== Análise Latência Média vs Número de Fogs - {IOT_CONFIG['nome']} ===")
+print(f"=== Análise Latência Média vs Número de fogs - {IOT_CONFIG['nome']} ===")
 print(f"Topologia: {TOPOLOGY_NAME}")
 print(f"Número de experimentos: {N_EXPERIMENTS}")
 print(f"Metaheurística: Excentricidade (Latência mínima)")
@@ -85,7 +85,8 @@ for i in range(n_samples_loaded):
         print(f"  Progresso: {i + 1}/{n_samples_loaded}")
     
     # Configurar experimento
-    cloud_position = random.randint(0, n_nodes - 1)
+    #cloud_position = random.randint(0, n_nodes - 1)
+    cloud_position = 0
     current_latencias = samples_data[i]['latencias']
     current_capacidades = samples_data[i]['capacidades']
     
@@ -107,8 +108,12 @@ for i in range(n_samples_loaded):
             cloud_position
         )
         
+        
         num_fogs = sum(resultado[1])
         solution_avg_latency = resultado[2]  # Esta é a latência média efetiva (L_ij × Y_ij)
+        avg_l_r = solution_avg_latency / escala_latencia
+        if avg_l_r > IOT_CONFIG['latencia']:
+            print("    Solução não atende requisitos, pulando...")
         
         # Armazenar dados da solução
         solution_avg_latencies.append(solution_avg_latency / escala_latencia)
@@ -124,7 +129,7 @@ print(f"Experimentos concluídos: {len(solution_avg_latencies)}")
 # 3. Estatísticas dos dados coletados
 if len(solution_avg_latencies) > 0:
     print(f"\n=== ESTATÍSTICAS DA SOLUÇÃO ===")
-    print(f"Latência média efetiva da solução (L_ij × Y_ij):")
+    print(f"Latência média da solução (L_ij × Y_ij):")
     print(f"  Mínima: {min(solution_avg_latencies):.2f} ms")
     print(f"  Máxima: {max(solution_avg_latencies):.2f} ms")
     print(f"  Média: {np.mean(solution_avg_latencies):.2f} ms")
@@ -153,22 +158,33 @@ scatter = ax.scatter(solution_avg_latencies, num_fogs_list,
 
 # Linha vertical para requisito de latência
 ax.axvline(x=IOT_CONFIG['latencia'], color='red', linestyle='--', linewidth=2, 
-           label=f'Requisito Latência = {IOT_CONFIG["latencia"]} ms')
+           label=f'Requisito latência = {IOT_CONFIG["latencia"]} ms')
 
 # Configurações do gráfico
-ax.set_xlabel('Latência Média Efetiva da Solução (ms)', fontsize=14)
-ax.set_ylabel('Número de Fogs', fontsize=14)
-ax.set_title(f'Latência Média Efetiva vs Número de Fogs - {TOPOLOGY_NAME}\n'
-             f'Metaheurística: Excentricidade (Latência), {len(solution_avg_latencies)} experimentos', 
-             fontsize=16)
+ax.set_xlabel('Latência média da solução (ms)', fontsize=14)
+ax.set_ylabel('Número de fogs', fontsize=14)
+#ax.set_title(f'Latência Média Efetiva vs Número de Fogs - {TOPOLOGY_NAME}\n'
+#             f'Metaheurística: Excentricidade (Latência), {len(solution_avg_latencies)} experimentos', 
+#             fontsize=16)
 ax.grid(True, alpha=0.3)
-ax.legend(fontsize=12)
 ax.tick_params(axis='both', which='major', labelsize=12)
 
 # Colorbar para capacidade média da rede
 cbar = plt.colorbar(scatter, ax=ax)
-cbar.set_label('Capacidade Média da Rede (Mbps)', fontsize=12)
+cbar.set_label('Capacidade média da rede (Mbps)', fontsize=12)
 cbar.ax.tick_params(labelsize=10)
+
+# Adicionar linha horizontal na colorbar marcando o requisito de capacidade
+cbar_min, cbar_max = scatter.get_clim()
+if IOT_CONFIG['capacidade'] >= cbar_min and IOT_CONFIG['capacidade'] <= cbar_max:
+    # Adicionar linha horizontal no colorbar
+    cbar.ax.axhline(y=IOT_CONFIG['capacidade'], color='red', linestyle='--', linewidth=2)
+    # Adicionar texto indicativo
+    cbar.ax.text(0.5, IOT_CONFIG['capacidade'], f'{IOT_CONFIG["capacidade"]} Mbps', 
+                transform=cbar.ax.get_yaxis_transform(), 
+                verticalalignment='center', horizontalalignment='left',
+                bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8),
+                fontsize=10, color='red', fontweight='bold')
 
 # Região de requisito de latência atendido
 x_min, x_max = ax.get_xlim()
@@ -178,8 +194,10 @@ y_min, y_max = ax.get_ylim()
 if IOT_CONFIG['latencia'] < x_max:
     ax.fill_betweenx([y_min, y_max], x_min, IOT_CONFIG['latencia'], 
                      alpha=0.2, color='green', 
-                     label='Região Latência IoT Viável')
-    ax.legend(fontsize=12)
+                     label='Região de latência viável')
+
+# Posicionar legenda no canto superior esquerdo
+ax.legend(fontsize=12, loc='upper left')
 
 plt.tight_layout()
 

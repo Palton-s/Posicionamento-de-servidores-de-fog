@@ -3,6 +3,10 @@ import networkx as nx
 import random
 import numpy as np
 
+# Configurar seed para garantir reprodutibilidade
+random.seed(42)
+np.random.seed(42)
+
 
 
 def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud_position):
@@ -29,17 +33,18 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
         for j in range(n_nodes):
             y[i].append(1 if min_lat_node == j else 0)
 
-    # Seleciona todos os nós que possuem latência entre a cloud e o nó menor que L_cloud_fog
-    possiveis_nos_de_fog = [i for i in range(n_nodes) if latencias[i][node] < L_cloud_fog]
+        # Seleciona todos os nós que possuem latência entre a cloud e o nó menor que L_cloud_fog
+        possiveis_nos_de_fog = [i for i in range(n_nodes) if latencias[i][node] < L_cloud_fog]
 
-    requisitos_atendidos = [0 for _ in range(n_nodes)]
-    latencia_atendida = ['' for _ in range(n_nodes)]
+        requisitos_atendidos = [0 for _ in range(n_nodes)]
+        latencia_atendida = ['' for _ in range(n_nodes)]
 
-    # Seleciona o nó com a maior latência
-    latencias_nos_posssiveis_de_fog = {i: latencias[i][node] for i in possiveis_nos_de_fog}
-    latencias_nos_posssiveis_de_fog.pop(node, None)
+        # Seleciona o nó com a maior latência (ordem determinística)
+        latencias_nos_posssiveis_de_fog = {i: latencias[i][node] for i in possiveis_nos_de_fog}
+        latencias_nos_posssiveis_de_fog.pop(node, None)
 
-    # Enquanto houver nós não atendidos
+        # Converte para lista ordenada por chave para garantir determinismo
+        nos_ordenados = sorted(latencias_nos_posssiveis_de_fog.keys())    # Enquanto houver nós não atendidos
     while sum(requisitos_atendidos) < n_nodes:
         
 
@@ -80,8 +85,12 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
         
         
         
-        # Pega a key do nó com a maior latência
-        no_fog = max(latencias_nos_posssiveis_de_fog, key=latencias_nos_posssiveis_de_fog.get)
+        # Pega a key do nó com a maior latência (determinístico)
+        if latencias_nos_posssiveis_de_fog:
+            no_fog = max(latencias_nos_posssiveis_de_fog.keys(), key=lambda k: (latencias_nos_posssiveis_de_fog[k], k))
+        else:
+            # Se não há mais nós possíveis, pega o primeiro da lista ordenada
+            no_fog = min(nos_ordenados) if nos_ordenados else node
         # Coloca a fog nesse nó
         fogs[no_fog] = 1
         # Remove o nó da lista de possíveis nós de fog
@@ -91,7 +100,7 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
         fogs_values = [i for i in range(n_nodes) if fogs[i] == 1]
         
 
-        for chave, valor in latencias_nos_posssiveis_de_fog.items():
+        for chave in sorted(latencias_nos_posssiveis_de_fog.keys()):  # Ordem determinística
             # pega a linha da matriz de latencias que corresponde ao nó
             linha = latencias[chave]
             # multiplica a linha pelo vetor de fogs
@@ -104,11 +113,17 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
         y = []
         for i in range(n_nodes):
             y.append([])
-            latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
-            # segurança: se não houver fog (não deve ocorrer), mantém cloud como destino
-            min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
-            for j in range(n_nodes):
-                y[i].append(1 if min_lat_node == j else 0)
+            # Se o nó i é um fog, ele atende a si mesmo (autossuficiência)
+            if fogs[i] == 1:
+                for j in range(n_nodes):
+                    y[i].append(1 if i == j else 0)  # yii = 1, yij = 0 para j != i
+            else:
+                # Se não é fog, encontra o fog mais próximo para atendê-lo
+                latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
+                # segurança: se não houver fog (não deve ocorrer), mantém cloud como destino
+                min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
+                for j in range(n_nodes):
+                    y[i].append(1 if min_lat_node == j else 0)
             
         
     # para cada elemento de fogs

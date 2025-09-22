@@ -1,20 +1,32 @@
 from ortools.linear_solver import pywraplp
+import random
+import os
+
 
 def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, cloud, alpha=1.0):
     solver = pywraplp.Solver('Simple_lp_program', pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+    
+    # Configurações para determinismo no OR-Tools
+    solver.SetSolverSpecificParametersAsString('randomSeed=42')
+    solver.SetTimeLimit(10000)  # 10 segundos de limite
     #solver.EnableOutput()  # Habilita a saída de log do solver
 
-    # ajusta as unidades de latência
-    uni = 0.025/25 # 25ms / 1000 = 0.025s
+
+    uni = 0.025/2
+    #uni = 1
     
     L_max = uni*L_max # 10ms (tempo real) 80ms (jogos) 200ms (IoT)
     L_cloud_fog = uni*L_cloud_fog # 200ms
     C_min = C_min
     C_cloud_fog = C_cloud_fog
 
+    # sorteia um nó para ser o cloud
+    #cloud = random.randint(0, len(latencias)-1)
+
     N = len(latencias)
 
     # define as variaveis de decisao
+
     # y representa se um nó i é servido por um nó j
     y = []
     for i in range(N):
@@ -27,6 +39,7 @@ def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, 
     for i in range(N):
         x.append(solver.BoolVar("x_"+str(i)))
         
+
     # define as restricoes
 
     # cada nó deve ser servido por um servidor
@@ -49,12 +62,20 @@ def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, 
         ct.SetCoefficient(x[i], 1)
         ct.SetCoefficient(y[i][i], -1)
 
+    # a latencia de um nó i para um nó j deve ser menor que L_max
+    for i in range(N):
+        for j in range(N):
+            ct = solver.Constraint(-solver.infinity(), L_max)
+            ct.SetCoefficient(y[i][j], float(latencias[i][j]))
+
     # a capacidade de um nó i para um nó j deve ser maior que C_min
     for i in range(N):
         for j in range(N):
             ct = solver.Constraint(-solver.infinity(), float(capacidades[i][j]))
             ct.SetCoefficient(y[i][j], C_min)
             
+
+
     # a latência entre um nó de serivdor e o cloud deve ser menor que L_cloud_fog
     for i in range(N):
         ct = solver.Constraint(-solver.infinity(), L_cloud_fog)
@@ -68,6 +89,7 @@ def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, 
     # x[cloud] = 1
     ct = solver.Constraint(1, 1)
     ct.SetCoefficient(x[cloud], 1)
+
         
     # define a funcao objetivo
     # define a função objetivo com dois critérios: número de fogs e latência média
@@ -80,6 +102,7 @@ def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, 
             objective.SetCoefficient(y[i][j], alpha * float(latencias[i][j])/(max_latencia*N))  # Minimiza latência média
 
     objective.SetMinimization()
+
 
     # resolve o problema
     solver.Solve()
@@ -104,7 +127,9 @@ def solveProblem(latencias, capacidades,L_max, C_min, L_cloud_fog, C_cloud_fog, 
     # se a latência média for 0, então não tem solução e então coloca L_cloud_fog
     if latencia_media == 0:
         latencia_media = L_cloud_fog
+        #print("Solução não encontrada, latência média é 0")
         
+
     # imprime o resultado
     return  solver.Objective().Value() -1, X_solution, latencia_media
 

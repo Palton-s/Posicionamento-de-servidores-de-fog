@@ -1,70 +1,9 @@
 """
-DatanetAPI module for reading network dataset files.
+Shim to re-export the parent datanetAPI module so this exec folder doesn't shadow the real implementation.
 """
-import queue
-import numpy
-import networkx
-import tarfile
-import random
-import math
+import importlib.util
 import os
 
-
-class TimeDist:
-    EXPONENTIAL_T = "exponential"
-
-
-class SizeDist:
-    BINOMIAL_S = "binomial"
-
-
-class Sample:
-    def __init__(self):
-        self._dataset_file_name = None
-        self._results_line = None
-        self._flowresults_line = None
-        self._routing_matrix = None
-        self._topology_object = None
-        self._performance_matrix = None
-        self._traffic_matrix = None
-        self._global_packets = None
-        self._global_losses = None
-        self._global_delay = None
-        self.maxAvgLambda = None
-
-    def _set_data_set_file_name(self, name):
-        self._dataset_file_name = name
-    
-    def _set_routing_matrix(self, matrix):
-        self._routing_matrix = matrix
-    
-    def _set_topology_object(self, obj):
-        self._topology_object = obj
-    
-    def _set_performance_matrix(self, matrix):
-        self._performance_matrix = matrix
-    
-    def _set_traffic_matrix(self, matrix):
-        self._traffic_matrix = matrix
-    
-    def _set_global_packets(self, packets):
-        self._global_packets = packets
-    
-    def _set_global_losses(self, losses):
-        self._global_losses = losses
-    
-    def _set_global_delay(self, delay):
-        self._global_delay = delay
-
-    def get_performance_matrix(self):
-        return self._performance_matrix
-    
-    def get_traffic_matrix(self):
-        return self._traffic_matrix
-    
-    @property
-    def topology_object(self):
-        return self._topology_object
 
 
 class DatanetAPI:
@@ -496,3 +435,8 @@ class DatanetAPI:
         dict_traffic['SizeDist'] = SizeDist.BINOMIAL_S
         params = {'AvgPktSize': 1000, 'PktSize1': 300, 'PktSize2': 1700}
         dict_traffic['SizeDistParams'] = params
+
+
+
+
+

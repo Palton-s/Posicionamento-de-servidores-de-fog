@@ -3,6 +3,10 @@ import networkx as nx
 import random
 import numpy as np
 
+# Configurar seed para garantir reprodutibilidade
+random.seed(42)
+np.random.seed(42)
+
 
 
 def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud_position):
@@ -24,25 +28,30 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
     y = []
     for i in range(n_nodes):
         y.append([])
-        capacities_fogs = {k: capacidades[i][k] for k in range(n_nodes) if fogs[k] == 1}
-        max_cap_node = max(capacities_fogs, key=capacities_fogs.get)
-        for j in range(n_nodes):
-            y[i].append(1 if max_cap_node == j else 0)
+        # Se o nó i é um fog, ele atende a si mesmo (autossuficiência)
+        if fogs[i] == 1:
+            for j in range(n_nodes):
+                y[i].append(1 if i == j else 0)  # yii = 1, yij = 0 para j != i
+        else:
+            # Se não é fog, encontra o fog com maior capacidade para atendê-lo
+            capacities_fogs = {k: capacidades[i][k] for k in range(n_nodes) if fogs[k] == 1}
+            max_cap_node = max(capacities_fogs, key=capacities_fogs.get)
+            for j in range(n_nodes):
+                y[i].append(1 if max_cap_node == j else 0)
 
-    # Seleciona todos os nós que possuem latência entre a cloud e o nó menor que L_cloud_fog
-    #possiveis_nos_de_fog = [i for i in range(n_nodes) if latencias[i][node] < L_cloud_fog]
-    # Seleciona todos os nós que possuem capacidade entre a cloud e o nó maior que min_capacity_cloud
-    possiveis_nos_de_fog = [i for i in range(n_nodes) if capacidades[i][node] > C_cloud_fog]
+    # Seleciona todos os nós que possuem capacidade entre a cloud e o nó maior que C_cloud_fog
+    # EXCLUINDO a cloud (node) da lista de candidatos
+    possiveis_nos_de_fog = [i for i in range(n_nodes) if capacidades[i][node] > C_cloud_fog and i != node]
 
     requisitos_atendidos = [0 for _ in range(n_nodes)]
     latencia_atendida = ['' for _ in range(n_nodes)]
 
-    # Seleciona o nó com a maior latência
-    #capacidades_nos_posssiveis_de_fog = {i: latencias[i][node] for i in possiveis_nos_de_fog}
-    # Seleciona o nó com a menor capacidade
+    # Seleciona o nó com a menor capacidade (ordem determinística)
     capacidades_nos_posssiveis_de_fog = {i: capacidades[i][node] for i in possiveis_nos_de_fog}
+    # Não é necessário fazer pop(node, None) porque node já foi excluído acima
     
-    capacidades_nos_posssiveis_de_fog.pop(node, None)
+    # Converte para lista ordenada por chave para garantir determinismo
+    nos_ordenados = sorted(capacidades_nos_posssiveis_de_fog.keys())
 
     # Enquanto houver nós não atendidos
     while sum(requisitos_atendidos) < n_nodes:
@@ -83,16 +92,33 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
             break
         # caso contrário, adiciona um nó de fog e testa novamente
         
-        # Pega a key do nó com a maior latência
-        # no_fog = max(capacidades_nos_posssiveis_de_fog, key=capacidades_nos_posssiveis_de_fog.get)
-        # Pega a key do nó com a menor capacidade
-        no_fog = min(capacidades_nos_posssiveis_de_fog, key=capacidades_nos_posssiveis_de_fog.get)
+        # Pega a key do nó com a menor capacidade (determinístico)
+        if capacidades_nos_posssiveis_de_fog:
+            no_fog = min(capacidades_nos_posssiveis_de_fog.keys(), key=lambda k: (capacidades_nos_posssiveis_de_fog[k], k))
+        else:
+            # Se não há mais nós possíveis, pega o primeiro da lista ordenada
+            no_fog = min(nos_ordenados) if nos_ordenados else node
         # Coloca a fog nesse nó
         fogs[no_fog] = 1
         # Remove o nó da lista de possíveis nós de fog
         capacidades_nos_posssiveis_de_fog.pop(no_fog)
         
-        for chave, valor in capacidades_nos_posssiveis_de_fog.items():
+        # Recalcula a matriz de atendimento y com base nos fogs atuais (autossuficiência)
+        y = []
+        for i in range(n_nodes):
+            y.append([])
+            # Se o nó i é um fog, ele atende a si mesmo (autossuficiência)
+            if fogs[i] == 1:
+                for j in range(n_nodes):
+                    y[i].append(1 if i == j else 0)  # yii = 1, yij = 0 para j != i
+            else:
+                # Se não é fog, encontra o fog com maior capacidade para atendê-lo
+                capacities_fogs = {k: capacidades[i][k] for k in range(n_nodes) if fogs[k] == 1}
+                max_cap_node = max(capacities_fogs.keys(), key=lambda k: (capacities_fogs[k], -k)) if capacities_fogs else node
+                for j in range(n_nodes):
+                    y[i].append(1 if max_cap_node == j else 0)
+        
+        for chave in sorted(capacidades_nos_posssiveis_de_fog.keys()):  # Ordem determinística
             # pega a linha da matriz de latencias que corresponde ao nó
             linha = capacidades[chave]
             # multiplica a linha pelo vetor de fogs

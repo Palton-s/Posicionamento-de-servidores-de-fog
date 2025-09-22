@@ -39,15 +39,21 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
     y = []
     for i in range(n_nodes):
         y.append([])
-        latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
-        min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
-        for j in range(n_nodes):
-            y[i].append(1 if min_lat_node == j else 0)
+        # Se o nó i é um fog, ele atende a si mesmo (autossuficiência)
+        if fogs[i] == 1:
+            for j in range(n_nodes):
+                y[i].append(1 if i == j else 0)  # yii = 1, yij = 0 para j != i
+        else:
+            # Se não é fog, encontra o fog mais próximo para atendê-lo
+            latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
+            min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
+            for j in range(n_nodes):
+                y[i].append(1 if min_lat_node == j else 0)
 
     requisitos_atendidos = [0 for _ in range(n_nodes)]
-    # Calcula o grau dos nós (número de conexões)
+    # Calcula o grau dos nós (número de conexões) - EXCLUINDO a cloud
     nos_mais_conectados = dict(nx.degree(dados.topology_object))
-    nos_mais_conectados.pop(node, None)
+    nos_mais_conectados.pop(node, None)  # Remove a cloud da lista de candidatos
     
     def desempate(nos):
         # Ordena os nós primeiro pelo grau (decrescente) e depois pela latência (decrescente)
@@ -93,14 +99,20 @@ def solver(latencias, capacidades, L_max, C_min, L_cloud_fog, C_cloud_fog, cloud
         # Remove o nó da lista de possíveis nós de fog
         nos_mais_conectados.pop(no_fog)
         
-        # Recalcula a matriz de atendimento y com base nos fogs atuais (reatribui ao fog mais próximo)
+        # Recalcula a matriz de atendimento y com base nos fogs atuais (autossuficiência)
         y = []
         for i in range(n_nodes):
             y.append([])
-            latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
-            min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
-            for j in range(n_nodes):
-                y[i].append(1 if min_lat_node == j else 0)
+            # Se o nó i é um fog, ele atende a si mesmo (autossuficiência)
+            if fogs[i] == 1:
+                for j in range(n_nodes):
+                    y[i].append(1 if i == j else 0)  # yii = 1, yij = 0 para j != i
+            else:
+                # Se não é fog, encontra o fog mais próximo para atendê-lo
+                latencies_fogs = {k: latencias[i][k] for k in range(n_nodes) if fogs[k] == 1}
+                min_lat_node = min(latencies_fogs, key=latencies_fogs.get)
+                for j in range(n_nodes):
+                    y[i].append(1 if min_lat_node == j else 0)
     
     # coloca 1 na posição do nó da cloud
     fogs[node] = 1

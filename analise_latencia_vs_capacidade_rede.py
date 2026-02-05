@@ -12,9 +12,15 @@ import aux_functions as aux
 import exp_excentricidade_lat_min
 
 # Configurações do experimento
+<<<<<<< Updated upstream
 TOPOLOGY_PATH = './nsfnetbw/'
 N_EXPERIMENTS = 500
 TOPOLOGY_NAME = 'nsfnetbw'
+=======
+TOPOLOGY_PATH = './synth50bw/'
+N_EXPERIMENTS = 320
+TOPOLOGY_NAME = 'synth50bw'
+>>>>>>> Stashed changes
 
 # Configurações da aplicação IoT Industrial
 IOT_CONFIG = {
@@ -37,8 +43,10 @@ print()
 
 # 1. Carregar dados da topologia
 print("Carregando dados da topologia...")
+print("Pasta de dados:", TOPOLOGY_PATH)
+print("Iniciando leitura das amostras...")
 try:
-    reader = datanetAPI.DatanetAPI(os.path.join(PARENT_DIR, TOPOLOGY_PATH), [])
+    reader = datanetAPI.DatanetAPI(TOPOLOGY_PATH)
     it_topo = iter(reader)
     
     # Coletar todas as amostras necessárias
@@ -46,6 +54,7 @@ try:
     
     for k in range(N_EXPERIMENTS):
         try:
+            print(f"Lendo amostra {k}")
             dados_sample = next(it_topo)
             lat, cap = aux.extrai_latencias_capacidades(dados_sample)
             samples_data.append({
@@ -149,14 +158,16 @@ if len(solution_avg_latencies) > 0:
 # 4. Plotar gráfico
 print("\nGerando gráfico...")
 
+
 fig, ax = plt.subplots(1, 1, figsize=(12, 8))
 
-# Scatter plot dos experimentos - Latência média efetiva vs Número de fogs
-scatter = ax.scatter(solution_avg_latencies, num_fogs_list, 
-                    c=network_avg_capacities, cmap='viridis', alpha=0.7, s=50, 
+# Scatter plot: eixo X = latência, eixo Y = capacidade, cor = número de fogs
+scatter = ax.scatter(solution_avg_latencies, network_avg_capacities,
+                    c=num_fogs_list, cmap='plasma', alpha=0.7, s=50,
                     edgecolors='black', linewidth=0.5)
 
 # Linha vertical para requisito de latência
+<<<<<<< Updated upstream
 ax.axvline(x=IOT_CONFIG['latencia'], color='red', linestyle='--', linewidth=2, 
            label=f'Requisito latência = {IOT_CONFIG["latencia"]} ms')
 
@@ -166,11 +177,26 @@ ax.set_ylabel('Número de fogs', fontsize=14)
 #ax.set_title(f'Latência Média Efetiva vs Número de Fogs - {TOPOLOGY_NAME}\n'
 #             f'Metaheurística: Excentricidade (Latência), {len(solution_avg_latencies)} experimentos', 
 #             fontsize=16)
+=======
+ax.axvline(x=IOT_CONFIG['latencia'], color='red', linestyle='--', linewidth=2,
+           label=f'Requisito Latência = {IOT_CONFIG["latencia"]} ms')
+# Linha horizontal para requisito de capacidade
+ax.axhline(y=IOT_CONFIG['capacidade'], color='blue', linestyle='--', linewidth=2,
+           label=f'Requisito Capacidade = {IOT_CONFIG["capacidade"]} Mbps')
+
+# Configurações do gráfico
+ax.set_xlabel('Latência Média Efetiva da Solução (ms)', fontsize=14)
+ax.set_ylabel('Capacidade Média da Rede (Mbps)', fontsize=14)
+ax.set_title(f'Capacidade Média vs Latência Média - {TOPOLOGY_NAME}\n'
+             f'Metaheurística: Excentricidade (Latência), {len(solution_avg_latencies)} experimentos',
+             fontsize=16)
+>>>>>>> Stashed changes
 ax.grid(True, alpha=0.3)
 ax.tick_params(axis='both', which='major', labelsize=12)
 
-# Colorbar para capacidade média da rede
+# Colorbar para número de fogs
 cbar = plt.colorbar(scatter, ax=ax)
+<<<<<<< Updated upstream
 cbar.set_label('Capacidade média da rede (Mbps)', fontsize=12)
 cbar.ax.tick_params(labelsize=10)
 
@@ -187,9 +213,20 @@ if IOT_CONFIG['capacidade'] >= cbar_min and IOT_CONFIG['capacidade'] <= cbar_max
                 fontsize=10, color='red', fontweight='bold')
 
 # Região de requisito de latência atendido
+=======
+cbar.set_label('Número de Fogs', fontsize=12)
+cbar.ax.tick_params(labelsize=10)
+
+# Região verde: requisitos atendidos (latência <= limite e capacidade >= limite)
+>>>>>>> Stashed changes
 x_min, x_max = ax.get_xlim()
 y_min, y_max = ax.get_ylim()
+lat_req = IOT_CONFIG['latencia']
+cap_req = IOT_CONFIG['capacidade']
+area_valida = ax.fill_betweenx([cap_req, y_max], x_min, lat_req, color='green', alpha=0.2,
+                 label=None)
 
+<<<<<<< Updated upstream
 # Destacar região que atende o requisito de latência (latência ≤ 15 ms)
 if IOT_CONFIG['latencia'] < x_max:
     ax.fill_betweenx([y_min, y_max], x_min, IOT_CONFIG['latencia'], 
@@ -198,6 +235,15 @@ if IOT_CONFIG['latencia'] < x_max:
 
 # Posicionar legenda no canto superior esquerdo
 ax.legend(fontsize=12, loc='upper left')
+=======
+# Adicionar manualmente à legenda
+from matplotlib.patches import Patch
+area_patch = Patch(facecolor='green', edgecolor='green', alpha=0.2, label='Área Válida (Requisitos Atendidos)')
+handles, labels = ax.get_legend_handles_labels()
+handles.append(area_patch)
+labels.append('Área Válida (Requisitos Atendidos)')
+ax.legend(handles, labels, fontsize=12)
+>>>>>>> Stashed changes
 
 plt.tight_layout()
 

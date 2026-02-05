@@ -1,8 +1,8 @@
 import sys, os
 # Ensure parent directory is on path to import datanetAPI and shared modules if needed
-PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PARENT_DIR not in sys.path:
-    sys.path.insert(0, PARENT_DIR)
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+if CURRENT_DIR not in sys.path:
+    sys.path.insert(0, CURRENT_DIR)
 
 import ortool_l
 import datanetAPI
@@ -54,7 +54,7 @@ experimentos_solvers = {
     "Conectividade_Cap_Min": exp_conectividade_cap_min.solver
 }
 
-# 3. Define Topologies (Dataset Paths) relative to parent folder
+# 3. Define Topologies (Dataset Paths) relative to current folder
 topologias_paths = ['./nsfnetbw/', './geant2bw/', './synth50bw/']
 
 # 4. Experiment Parameters
@@ -71,7 +71,7 @@ topology_samples = {}
 for topology_path in topologias_paths:
     print(f"  Carregando de: {topology_path}")
     try:
-        reader = datanetAPI.DatanetAPI(os.path.join(PARENT_DIR, topology_path), [])
+        reader = datanetAPI.DatanetAPI(os.path.join(CURRENT_DIR, topology_path), [])
         it_topo = iter(reader)
         samples = {
             "lat": [],
@@ -83,6 +83,9 @@ for topology_path in topologias_paths:
         for k in range(n_simulacoes_por_config):
             try:
                 dados_sample = next(it_topo)
+                print(dados_sample)
+                import pprint
+                pprint.pprint(vars(dados_sample))
                 lat, cap = aux.extrai_latencias_capacidades(dados_sample)
                 samples["lat"].append(lat)
                 samples["cap"].append(cap)
